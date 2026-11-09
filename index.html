@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Routiny - ระบบจัดการงานบ้านและตารางกิจกรรม</title>
+    <title>Routiny - ระบบจัดการงานบ้านและตารางกิจกรรม (Shared)</title>
     <!-- Tailwind CSS & FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -30,7 +30,7 @@
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-calendar-check text-2xl text-yellow-300"></i>
-                <h1 class="text-2xl font-bold tracking-wide">Routiny</h1>
+                <h1 class="text-2xl font-bold tracking-wide">Routiny <span id="syncStatus" class="text-xs bg-emerald-500 px-2 py-0.5 rounded-full text-white ml-2">เชื่อมต่อแล้ว</span></h1>
             </div>
             <div class="flex space-x-2">
                 <button type="button" onclick="openModal('modalCustomData')" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition">
@@ -48,12 +48,17 @@
                 <label class="font-medium text-slate-700"><i class="fa-regular fa-calendar text-brand-500"></i> เลือกเดือน/ปี:</label>
                 <input type="month" id="filterMonth" onchange="renderTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 font-sans">
             </div>
-            <button type="button" onclick="openAddTaskModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-2">
-                <i class="fa-solid fa-plus"></i> เพิ่มรายการใหม่
-            </button>
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="loadDataFromCloud()" class="text-slate-600 hover:text-brand-600 text-sm flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition">
+                    <i class="fa-solid fa-rotate"></i> โหลดข้อมูลล่าสุด
+                </button>
+                <button type="button" onclick="openAddTaskModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> เพิ่มรายการใหม่
+                </button>
+            </div>
         </div>
 
-        <!-- Main Schedule Table (แสดงวันที่ 1-31 ตลอดเวลา) -->
+        <!-- Main Schedule Table (วันที่ 1 - 31) -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                 <h2 class="font-semibold text-slate-700 text-lg flex items-center gap-2">
@@ -126,7 +131,7 @@
                 </div>
                 <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
                     <button type="button" onclick="closeModal('modalAddTask')" class="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm">ยกเลิก</button>
-                    <button type="submit" class="px-5 py-2 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 text-sm shadow">บันทึก</button>
+                    <button type="submit" id="saveBtn" class="px-5 py-2 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 text-sm shadow">บันทึก</button>
                 </div>
             </form>
         </div>
@@ -167,26 +172,83 @@
     </div>
 
     <script>
-        let pairs = JSON.parse(localStorage.getItem('routiny_pairs')) || ['คู่ที่ 1', 'คู่ที่ 2', 'คู่ที่ 3'];
-        let categories = JSON.parse(localStorage.getItem('routiny_categories')) || ['งานบ้านทั่วไป', 'เครื่องใช้ไฟฟ้า', 'ซื้อของเข้าบ้าน', 'ดูแลสัตว์เลี้ยง'];
-        let tasks = JSON.parse(localStorage.getItem('routiny_tasks')) || [];
+        // Web App URL ของมอยที่สร้างสำเร็จ
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxFkAApDVGwb3ranJWmGamIuMcHbM2qFOe8R66eGP8xICVUf1-AjsqGCVh8j22d6QV5Uw/exec";
+
+        let pairs = ['คู่ที่ 1', 'คู่ที่ 2', 'คู่ที่ 3'];
+        let categories = ['งานบ้านทั่วไป', 'เครื่องใช้ไฟฟ้า', 'ซื้อของเข้าบ้าน', 'ดูแลสัตว์เลี้ยง'];
+        let tasks = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
-            const defaultYM = `${year}-${month}`;
             const monthInput = document.getElementById('filterMonth');
-            if (monthInput) monthInput.value = defaultYM;
+            if (monthInput) monthInput.value = `${year}-${month}`;
 
-            updateDropdowns();
-            renderTable();
+            loadDataFromCloud();
         });
 
-        function saveToStorage() {
-            localStorage.setItem('routiny_pairs', JSON.stringify(pairs));
-            localStorage.setItem('routiny_categories', JSON.stringify(categories));
-            localStorage.setItem('routiny_tasks', JSON.stringify(tasks));
+        function loadDataFromCloud() {
+            const statusEl = document.getElementById('syncStatus');
+            if (statusEl) {
+                statusEl.className = "text-xs bg-amber-500 px-2 py-0.5 rounded-full text-white ml-2";
+                statusEl.innerText = "กำลังซิงค์...";
+            }
+
+            fetch(WEB_APP_URL)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.tasks) tasks = data.tasks;
+                    if (data.pairs) pairs = data.pairs;
+                    if (data.categories) categories = data.categories;
+                    
+                    updateDropdowns();
+                    renderTable();
+
+                    if (statusEl) {
+                        statusEl.className = "text-xs bg-emerald-500 px-2 py-0.5 rounded-full text-white ml-2";
+                        statusEl.innerText = "เชื่อมต่อแล้ว";
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    if (statusEl) {
+                        statusEl.className = "text-xs bg-rose-500 px-2 py-0.5 rounded-full text-white ml-2";
+                        statusEl.innerText = "เกิดข้อผิดพลาด";
+                    }
+                    updateDropdowns();
+                    renderTable();
+                });
+        }
+
+        function saveToCloud() {
+            const statusEl = document.getElementById('syncStatus');
+            if (statusEl) {
+                statusEl.className = "text-xs bg-amber-500 px-2 py-0.5 rounded-full text-white ml-2";
+                statusEl.innerText = "กำลังบันทึก...";
+            }
+
+            const payload = { tasks, pairs, categories };
+
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                if (statusEl) {
+                    statusEl.className = "text-xs bg-emerald-500 px-2 py-0.5 rounded-full text-white ml-2";
+                    statusEl.innerText = "ซิงค์แล้ว";
+                    setTimeout(() => { statusEl.innerText = "เชื่อมต่อแล้ว"; }, 2000);
+                }
+            }).catch(err => {
+                console.error(err);
+                if (statusEl) {
+                    statusEl.className = "text-xs bg-rose-500 px-2 py-0.5 rounded-full text-white ml-2";
+                    statusEl.innerText = "บันทึกไม่สำเร็จ";
+                }
+            });
         }
 
         function updateDropdowns() {
@@ -223,16 +285,16 @@
             if (val && !pairs.includes(val)) {
                 pairs.push(val);
                 input.value = '';
-                saveToStorage();
                 updateDropdowns();
+                saveToCloud();
             }
         }
 
         function deletePair(index) {
             if (pairs.length <= 1) return alert('ต้องมีอย่างน้อย 1 คู่');
             pairs.splice(index, 1);
-            saveToStorage();
             updateDropdowns();
+            saveToCloud();
         }
 
         function addCategory() {
@@ -241,16 +303,16 @@
             if (val && !categories.includes(val)) {
                 categories.push(val);
                 input.value = '';
-                saveToStorage();
                 updateDropdowns();
+                saveToCloud();
             }
         }
 
         function deleteCategory(index) {
             if (categories.length <= 1) return alert('ต้องมีอย่างน้อย 1 หมวดหมู่');
             categories.splice(index, 1);
-            saveToStorage();
             updateDropdowns();
+            saveToCloud();
         }
 
         function renderTable() {
@@ -338,7 +400,7 @@
                 tasks.push(taskData);
             }
 
-            saveToStorage();
+            saveToCloud();
             closeModal('modalAddTask');
             renderTable();
         }
@@ -380,7 +442,7 @@
         function deleteTask(id) {
             if (confirm('คุณต้องการลบรายการนี้ใช่หรือไม่?')) {
                 tasks = tasks.filter(t => t.id !== id);
-                saveToStorage();
+                saveToCloud();
                 renderTable();
             }
         }
