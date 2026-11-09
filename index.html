@@ -33,7 +33,7 @@
                 <h1 class="text-2xl font-bold tracking-wide">Routiny</h1>
             </div>
             <div class="flex space-x-2">
-                <button onclick="openModal('modalCustomData')" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition">
+                <button type="button" onclick="openModal('modalCustomData')" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition">
                     <i class="fa-solid fa-gear"></i> ตั้งค่าคู่ & หมวดหมู่
                 </button>
             </div>
@@ -42,13 +42,13 @@
 
     <main class="max-w-7xl mx-auto px-4 mt-6 space-y-6">
 
-        <!-- Top Controls: Select Month/Year & Actions -->
+        <!-- Top Controls -->
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex flex-wrap items-center gap-3">
                 <label class="font-medium text-slate-700"><i class="fa-regular fa-calendar text-brand-500"></i> เลือกเดือน/ปี:</label>
                 <input type="month" id="filterMonth" onchange="renderTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 font-sans">
             </div>
-            <button onclick="openModal('modalAddTask')" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-2">
+            <button type="button" onclick="openAddTaskModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-2">
                 <i class="fa-solid fa-plus"></i> เพิ่มรายการใหม่
             </button>
         </div>
@@ -85,10 +85,10 @@
 
     <!-- Modal: Add / Edit Task -->
     <div id="modalAddTask" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden transform transition-all">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
             <div class="bg-brand-600 px-6 py-4 text-white flex justify-between items-center">
                 <h3 id="modalTaskTitle" class="font-semibold text-lg">เพิ่มรายการกิจกรรม</h3>
-                <button onclick="closeModal('modalAddTask')" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <button type="button" onclick="closeModal('modalAddTask')" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <form id="taskForm" onsubmit="saveTask(event)" class="p-6 space-y-4">
                 <input type="hidden" id="taskId">
@@ -137,4 +137,269 @@
         <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
             <div class="bg-slate-800 px-6 py-4 text-white flex justify-between items-center">
                 <h3 class="font-semibold text-lg">จัดการรายชื่อคู่ & หมวดหมู่</h3>
-                <button onclick="closeModal('
+                <button type="button" onclick="closeModal('modalCustomData')" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                <!-- Manage Pairs -->
+                <div>
+                    <h4 class="font-medium text-slate-700 mb-2 border-b pb-1">
+                        <span><i class="fa-solid fa-user-group text-brand-500"></i> รายชื่อแต่ละคู่</span>
+                    </h4>
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="newPairInput" placeholder="เพิ่มคู่ใหม่..." class="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        <button type="button" onclick="addPair()" class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-brand-700">เพิ่ม</button>
+                    </div>
+                    <ul id="pairList" class="space-y-1.5 text-sm"></ul>
+                </div>
+                <!-- Manage Categories -->
+                <div>
+                    <h4 class="font-medium text-slate-700 mb-2 border-b pb-1">
+                        <span><i class="fa-solid fa-layer-group text-indigo-500"></i> หมวดหมู่กิจกรรม</span>
+                    </h4>
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="newCatInput" placeholder="เพิ่มหมวดหมู่ใหม่..." class="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        <button type="button" onclick="addCategory()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700">เพิ่ม</button>
+                    </div>
+                    <ul id="catList" class="space-y-1.5 text-sm"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pairs = JSON.parse(localStorage.getItem('routiny_pairs')) || ['คู่ที่ 1', 'คู่ที่ 2', 'คู่ที่ 3'];
+        let categories = JSON.parse(localStorage.getItem('routiny_categories')) || ['งานบ้านทั่วไป', 'เครื่องใช้ไฟฟ้า', 'ซื้อของเข้าบ้าน', 'ดูแลสัตว์เลี้ยง'];
+        let tasks = JSON.parse(localStorage.getItem('routiny_tasks')) || [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const defaultYM = `${year}-${month}`;
+            const monthInput = document.getElementById('filterMonth');
+            if (monthInput) monthInput.value = defaultYM;
+
+            updateDropdowns();
+            renderTable();
+        });
+
+        function saveToStorage() {
+            localStorage.setItem('routiny_pairs', JSON.stringify(pairs));
+            localStorage.setItem('routiny_categories', JSON.stringify(categories));
+            localStorage.setItem('routiny_tasks', JSON.stringify(tasks));
+        }
+
+        function updateDropdowns() {
+            const pairSelect = document.getElementById('taskPair');
+            const catSelect = document.getElementById('taskCategory');
+            
+            if (pairSelect) pairSelect.innerHTML = pairs.map(p => `<option value="${p}">${p}</option>`).join('');
+            if (catSelect) catSelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            const pairList = document.getElementById('pairList');
+            if (pairList) {
+                pairList.innerHTML = pairs.map((p, index) => `
+                    <li class="flex justify-between items-center bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
+                        <span>${p}</span>
+                        <button type="button" onclick="deletePair(${index})" class="text-red-500 hover:text-red-700"><i class="fa-regular fa-trash-can"></i></button>
+                    </li>
+                `).join('');
+            }
+
+            const catList = document.getElementById('catList');
+            if (catList) {
+                catList.innerHTML = categories.map((c, index) => `
+                    <li class="flex justify-between items-center bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
+                        <span>${c}</span>
+                        <button type="button" onclick="deleteCategory(${index})" class="text-red-500 hover:text-red-700"><i class="fa-regular fa-trash-can"></i></button>
+                    </li>
+                `).join('');
+            }
+        }
+
+        function addPair() {
+            const input = document.getElementById('newPairInput');
+            const val = input.value.trim();
+            if (val && !pairs.includes(val)) {
+                pairs.push(val);
+                input.value = '';
+                saveToStorage();
+                updateDropdowns();
+            }
+        }
+
+        function deletePair(index) {
+            if (pairs.length <= 1) return alert('ต้องมีอย่างน้อย 1 คู่');
+            pairs.splice(index, 1);
+            saveToStorage();
+            updateDropdowns();
+        }
+
+        function addCategory() {
+            const input = document.getElementById('newCatInput');
+            const val = input.value.trim();
+            if (val && !categories.includes(val)) {
+                categories.push(val);
+                input.value = '';
+                saveToStorage();
+                updateDropdowns();
+            }
+        }
+
+        function deleteCategory(index) {
+            if (categories.length <= 1) return alert('ต้องมีอย่างน้อย 1 หมวดหมู่');
+            categories.splice(index, 1);
+            saveToStorage();
+            updateDropdowns();
+        }
+
+        function renderTable() {
+            const monthInput = document.getElementById('filterMonth');
+            let selectedMonthStr = monthInput ? monthInput.value : '';
+            
+            if (!selectedMonthStr) {
+                const now = new Date();
+                selectedMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            }
+
+            const [y, m] = selectedMonthStr.split('-');
+            const daysInMonth = new Date(y, m, 0).getDate();
+
+            const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const monthLabel = document.getElementById('tableMonthLabel');
+            if (monthLabel) monthLabel.innerText = `${monthNames[parseInt(m) - 1]} ${parseInt(y) + 543}`;
+
+            const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayStr = String(day).padStart(2, '0');
+                const fullDateStr = `${selectedMonthStr}-${dayStr}`;
+                const dayTasks = tasks.filter(t => t.date === fullDateStr);
+
+                if (dayTasks.length > 0) {
+                    dayTasks.forEach((task) => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-slate-50 transition border-b border-slate-200";
+                        tr.innerHTML = `
+                            <td class="py-3 px-4 text-center font-bold text-slate-700 bg-slate-50/50 border-r border-slate-200">${day}</td>
+                            <td class="py-3 px-4 font-medium text-slate-800 border-r border-slate-200">${task.title}</td>
+                            <td class="py-3 px-4 border-r border-slate-200"><span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-xs border border-slate-200">${task.category}</span></td>
+                            <td class="py-3 px-4 text-slate-600 border-r border-slate-200"><i class="fa-regular fa-clock text-slate-400 mr-1"></i>${task.time} น.</td>
+                            <td class="py-3 px-4 border-r border-slate-200"><span class="bg-brand-50 text-brand-700 font-medium px-2.5 py-1 rounded-md text-xs border border-brand-100">${task.pair}</span></td>
+                            <td class="py-3 px-4 text-slate-500 border-r border-slate-200">${task.note || '-'}</td>
+                            <td class="py-3 px-4 text-center">
+                                <div class="flex justify-center space-x-2">
+                                    <button type="button" onclick="editTask('${task.id}')" class="text-blue-600 hover:text-blue-800" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button type="button" onclick="deleteTask('${task.id}')" class="text-red-500 hover:text-red-700" title="ลบ"><i class="fa-regular fa-trash-can"></i></button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-slate-200 hover:bg-sky-50/50 transition cursor-pointer group";
+                    tr.onclick = () => quickAddTask(fullDateStr);
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 text-center font-bold text-slate-600 bg-slate-50 border-r border-slate-200">${day}</td>
+                        <td class="py-3 px-4 border-r border-slate-200 text-slate-400 italic text-xs group-hover:text-brand-600">+ คลิกเพื่อเพิ่มรายการ...</td>
+                        <td class="py-3 px-4 border-r border-slate-200 text-slate-300">-</td>
+                        <td class="py-3 px-4 border-r border-slate-200 text-slate-300">-</td>
+                        <td class="py-3 px-4 border-r border-slate-200 text-slate-300">-</td>
+                        <td class="py-3 px-4 border-r border-slate-200 text-slate-300">-</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="text-slate-300 group-hover:text-brand-600 text-xs"><i class="fa-solid fa-plus"></i></span>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            }
+        }
+
+        function saveTask(e) {
+            e.preventDefault();
+            const id = document.getElementById('taskId').value;
+            const taskData = {
+                id: id || Date.now().toString(),
+                date: document.getElementById('taskDate').value,
+                time: document.getElementById('taskTime').value,
+                title: document.getElementById('taskTitle').value.trim(),
+                category: document.getElementById('taskCategory').value,
+                pair: document.getElementById('taskPair').value,
+                note: document.getElementById('taskNote').value.trim()
+            };
+
+            if (id) {
+                const idx = tasks.findIndex(t => t.id === id);
+                if (idx !== -1) tasks[idx] = taskData;
+            } else {
+                tasks.push(taskData);
+            }
+
+            saveToStorage();
+            closeModal('modalAddTask');
+            renderTable();
+        }
+
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            document.getElementById('taskId').value = task.id;
+            document.getElementById('taskDate').value = task.date;
+            document.getElementById('taskTime').value = task.time;
+            document.getElementById('taskTitle').value = task.title;
+            document.getElementById('taskCategory').value = task.category;
+            document.getElementById('taskPair').value = task.pair;
+            document.getElementById('taskNote').value = task.note;
+
+            document.getElementById('modalTaskTitle').innerText = 'แก้ไขรายการกิจกรรม';
+            openModal('modalAddTask');
+        }
+
+        function openAddTaskModal() {
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskDate').valueAsDate = new Date();
+            document.getElementById('taskTime').value = '09:00';
+            document.getElementById('modalTaskTitle').innerText = 'เพิ่มรายการกิจกรรม';
+            openModal('modalAddTask');
+        }
+
+        function quickAddTask(dateStr) {
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskDate').value = dateStr;
+            document.getElementById('taskTime').value = '09:00';
+            document.getElementById('modalTaskTitle').innerText = `เพิ่มรายการ (วันที่ ${parseInt(dateStr.split('-')[2])})`;
+            openModal('modalAddTask');
+        }
+
+        function deleteTask(id) {
+            if (confirm('คุณต้องการลบรายการนี้ใช่หรือไม่?')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveToStorage();
+                renderTable();
+            }
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
