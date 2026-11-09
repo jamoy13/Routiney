@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการงานบ้านและเครื่องใช้ไฟฟ้า (Home Schedule Manager)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Kanit & Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Kanit', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.4);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen pb-12">
+
+    <!-- Navbar Header -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid font-bold fa-house-chimney-window text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-sky-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-400 bg-clip-text text-transparent">Home Routine</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">ตารางจัดการงานบ้าน & เครื่องใช้ไฟฟ้า</p>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center gap-2">
+                <!-- Theme Toggle Button -->
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+                <!-- Add Task Button -->
+                <button onclick="openModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-medium shadow-md shadow-sky-500/20 transition active:scale-95">
+                    <i class="fa-solid fa-plus"></i>
+                    <span class="hidden sm:inline">เพิ่มรายการ</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
+
+        <!-- Banner & Progress Card -->
+        <div class="bg-gradient-to-r from-sky-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div class="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
+                <i class="fa-solid fa-broom text-9xl"></i>
+            </div>
+            
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-xs font-semibold backdrop-blur-sm mb-2" id="currentDateStr">
+                        --/--/----
+                    </span>
+                    <h2 class="text-2xl font-bold">ความคืบหน้าประจำวัน</h2>
+                    <p class="text-sky-100 text-sm mt-1" id="progressSubtitle">ทำเสร็จแล้ว 0 จาก 0 รายการ</p>
+                </div>
+
+                <!-- Progress Bar Circle / Bar -->
+                <div class="w-full md:w-64">
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span>เป้าหมายวันนี้</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="w-full bg-black/20 rounded-full h-3 overflow-hidden p-0.5 backdrop-blur-sm">
+                        <div id="progressBar" class="bg-white h-full rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="flex flex-col sm:flex-row gap-3 justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <!-- Categories Tabs -->
+            <div class="flex gap-1 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 custom-scrollbar">
+                <button onclick="filterCategory('all')" id="tab-all" class="category-tab px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300">
+                    <i class="fa-solid fa-list-check mr-1.5"></i>ทั้งหมด
+                </button>
+                <button onclick="filterCategory('chore')" id="tab-chore" class="category-tab px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <i class="fa-solid fa-broom mr-1.5"></i>งานบ้าน
+                </button>
+                <button onclick="filterCategory('appliance')" id="tab-appliance" class="category-tab px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <i class="fa-solid fa-snowflake mr-1.5"></i>แอร์ & เครื่องใช้ไฟฟ้า
+                </button>
+            </div>
+
+            <!-- Quick Action: Reset Progress -->
+            <button onclick="resetDailyProgress()" class="w-full sm:w-auto text-xs text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-rotate-right"></i>
+                รีเซ็ตสถานะประจำวัน
+            </button>
+        </div>
+
+        <!-- Task List Section -->
+        <div id="taskList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Items will be injected here via JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <div class="w-16 h-16 mx-auto mb-3 text-slate-300 dark:text-slate-600 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-900">
+                <i class="fa-solid fa-clipboard-list text-3xl"></i>
+            </div>
+            <h3 class="text-base font-medium text-slate-700 dark:text-slate-300">ยังไม่มีรายการในหมวดหมู่นี้</h3>
+            <p class="text-xs text-slate-400 mt-1">คลิกปุ่ม "เพิ่มรายการ" เพื่อสร้างตารางเวลาของคุณ</p>
+        </div>
+
+    </main>
+
+    <!-- Modal: Add Task -->
+    <div id="taskModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-xl transform scale-95 transition-transform duration-300 border border-slate-200 dark:border-slate-700" id="modalContent">
+            
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-slate-800 dark:text-white" id="modalTitle">เพิ่มรายการใหม่</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="taskForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="taskId">
+
+                <!-- Title -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">ชื่อรายการ / กิจกรรม *</label>
+                    <input type="text" id="taskTitle" required placeholder="เช่น เปิดแอร์ห้องนอน 26°C + พัดลม" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm">
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">หมวดหมู่ *</label>
+                    <select id="taskCategory" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm">
+                        <option value="chore">🧹 งานบ้านทั่วไป (ทำความสะอาด, ซักผ้า ฯลฯ)</option>
+                        <option value="appliance">❄️ เครื่องใช้ไฟฟ้า / เครื่องปรับอากาศ</option>
+                    </select>
+                </div>
+
+                <!-- Time & Frequency -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">เวลา *</label>
+                        <input type="time" id="taskTime" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">ความถี่</label>
+                        <select id="taskFreq" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm">
+                            <option value="ทุกวัน">ทุกวัน</option>
+                            <option value="วันเว้นวัน">วันเว้นวัน</option>
+                            <option value="เฉพาะเสาร์-อาทิตย์">เฉพาะเสาร์-อาทิตย์</option>
+                            <option value="สัปดาห์ละครั้ง">สัปดาห์ละครั้ง</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Notes / Details -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">หมายเหตุเพิ่มเติม</label>
+                    <textarea id="taskNote" rows="2" placeholder="เช่น ตั้งอุณหภูมิ 26 องศา, ใส่น้ำยาปรับผ้านุ่มด้วย" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"></textarea>
+                </div>
+
+                <!-- Form Buttons -->
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="w-1/2 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium transition">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="w-1/2 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium transition shadow-md shadow-sky-500/20">
+                        บันทึก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">บันทึกข้อมูลเรียบร้อย</span>
+    </div>
+
+    <script>
+        // Default Sample Data
+        const defaultTasks = [
+            { id: 1, title: 'เปิดแอร์ห้องนอน (26°C + พัดลมคู่)', category: 'appliance', time: '21:30', freq: 'ทุกวัน', note: 'ช่วยประหยัดไฟ 10-15%', completed: false },
+            { id: 2, title: 'ปิดแอร์ห้องนอน & เปิดหน้าต่างระบายอากาศ', category: 'appliance', time: '06:30', freq: 'ทุกวัน', note: 'รับลมตอนเช้า', completed: false },
+            { id: 3, title: 'ถูพื้นชั้น 1 และดูดฝุ่น', category: 'chore', time: '09:00', freq: 'เฉพาะเสาร์-อาทิตย์', note: 'ใช้น้ำยาถูพื้นกลิ่นลาเวนเดอร์', completed: false },
+            { id: 4, title: 'ซักผ้า + ตากผ้า', category: 'chore', time: '08:00', freq: 'วันเว้นวัน', note: 'แยกผ้าขาวและผ้าสี', completed: false },
+            { id: 5, title: 'กรอกน้ำดื่มใส่ขวดตู้เย็น', category: 'chore', time: '18:00', freq: 'ทุกวัน', note: 'เช็กไส้กรองน้ำ', completed: false }
+        ];
+
+        let tasks = [];
+        let currentFilter = 'all';
+
+        // Initialization
+        window.onload = function() {
+            initTheme();
+            loadTasks();
+            updateDateDisplay();
+            renderTasks();
+        };
+
+        // Date Display
+        function updateDateDisplay() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDateStr').innerText = now.toLocaleDateString('th-TH', options);
+        }
+
+        // Theme Toggle
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-amber-400';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon';
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon';
+        }
+
+        // LocalStorage Management
+        function loadTasks() {
+            const saved = localStorage.getItem('homeTasks');
+            if (saved) {
+                try {
+                    tasks = JSON.parse(saved);
+                } catch(e) {
+                    tasks = defaultTasks;
+                }
+            } else {
+                tasks = defaultTasks;
+                saveTasks();
+            }
+        }
+
+        function saveTasks() {
+            localStorage.setItem('homeTasks', JSON.stringify(tasks));
+            updateProgress();
+        }
+
+        // Task Completion Toggle
+        function toggleTask(id) {
+            tasks = tasks.map(t => {
+                if(t.id === id) {
+                    const updated = { ...t, completed: !t.completed };
+                    showToast(updated.completed ? 'ทำรายการเสร็จแล้ว ✨' : 'ยกเลิกสถานะเรียบร้อย');
+                    return updated;
+                }
+                return t;
+            });
+            saveTasks();
+            renderTasks();
+        }
+
+        // Filter Logic
+        function filterCategory(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.className = "category-tab px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700";
+            });
+            
+            const activeTab = document.getElementById(`tab-${cat}`);
+            if(activeTab) {
+                activeTab.className = "category-tab px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 font-semibold";
+            }
+
+            renderTasks();
+        }
+
+        // Render Tasks to UI
+        function renderTasks() {
+            const listEl = document.getElementById('taskList');
+            const emptyEl = document.getElementById('emptyState');
+            listEl.innerHTML = '';
+
+            const filtered = tasks.filter(t => currentFilter === 'all' ? true : t.category === currentFilter);
+
+            // Sort by time ascending
+            filtered.sort((a, b) => a.time.localeCompare(b.time));
+
+            if(filtered.length === 0) {
+                emptyEl.classList.remove('hidden');
+            } else {
+                emptyEl.classList.add('hidden');
+            }
+
+            filtered.forEach(task => {
+                const isAppliance = task.category === 'appliance';
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-2xl border transition-all duration-200 flex items-start gap-3.5 bg-white dark:bg-slate-800 ${
+                    task.completed 
+                    ? 'border-slate-200 dark:border-slate-700 opacity-60' 
+                    : 'border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md'
+                }`;
+
+                card.innerHTML = `
+                    <!-- Checkbox -->
+                    <button onclick="toggleTask(${task.id})" class="mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                        task.completed 
+                        ? 'bg-emerald-500 border-emerald-500 text-white' 
+                        : 'border-slate-300 dark:border-slate-600 hover:border-sky-500'
+                    }">
+                        ${task.completed ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                    </button>
+
+                    <!-- Content -->
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                                isAppliance 
+                                ? 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300' 
+                                : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                            }">
+                                <i class="fa-solid ${isAppliance ? 'fa-snowflake' : 'fa-broom'} mr-1"></i>
+                                ${isAppliance ? 'เครื่องใช้ไฟฟ้า' : 'งานบ้าน'}
+                            </span>
+                            <span class="text-xs font-mono font-medium text-slate-500 dark:text-slate-400">
+                                <i class="fa-regular fa-clock mr-1"></i>${task.time} น.
+                            </span>
+                        </div>
+
+                        <h4 class="text-base font-medium text-slate-800 dark:text-slate-100 leading-snug ${task.completed ? 'line-through text-slate-400 dark:text-slate-500' : ''}">
+                            ${escapeHtml(task.title)}
+                        </h4>
+
+                        ${task.note ? `<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">${escapeHtml(task.note)}</p>` : ''}
+                        
+                        <div class="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
+                            <span><i class="fa-solid fa-repeat mr-1"></i>${task.freq}</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-1">
+                        <button onclick="editTask(${task.id})" class="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="แก้ไข">
+                            <i class="fa-solid fa-pen-to-square text-sm"></i>
+                        </button>
+                        <button onclick="deleteTask(${task.id})" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="ลบ">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                `;
+
+                listEl.appendChild(card);
+            });
+
+            updateProgress();
+        }
+
+        // Progress Calculation
+        function updateProgress() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.completed).length;
+            const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+            document.getElementById('progressSubtitle').innerText = `ทำเสร็จแล้ว ${completed} จาก ${total} รายการ`;
+            document.getElementById('progressPercent').innerText = `${percent}%`;
+            document.getElementById('progressBar').style.width = `${percent}%`;
+        }
+
+        // Reset All Daily Progress
+        function resetDailyProgress() {
+            if(confirm('คุณต้องการรีเซ็ตสถานะการทำงานของวันนี้ทั้งหมดใช่หรือไม่?')) {
+                tasks = tasks.map(t => ({ ...t, completed: false }));
+                saveTasks();
+                renderTasks();
+                showToast('รีเซ็ตสถานะประจำวันแล้ว');
+            }
+        }
+
+        // Modal Handlers
+        function openModal(editId = null) {
+            const modal = document.getElementById('taskModal');
+            const content = document.getElementById('modalContent');
+            const form = document.getElementById('taskForm');
+            
+            form.reset();
+            document.getElementById('taskId').value = '';
+
+            if (editId) {
+                const task = tasks.find(t => t.id === editId);
+                if (task) {
+                    document.getElementById('modalTitle').innerText = 'แก้ไขรายการ';
+                    document.getElementById('taskId').value = task.id;
+                    document.getElementById('taskTitle').value = task.title;
+                    document.getElementById('taskCategory').value = task.category;
+                    document.getElementById('taskTime').value = task.time;
+                    document.getElementById('taskFreq').value = task.freq;
+                    document.getElementById('taskNote').value = task.note || '';
+                }
+            } else {
+                document.getElementById('modalTitle').innerText = 'เพิ่มรายการใหม่';
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('taskModal');
+            const content = document.getElementById('modalContent');
+            
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+        }
+
+        // Form Submit
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('taskId').value;
+            const title = document.getElementById('taskTitle').value.trim();
+            const category = document.getElementById('taskCategory').value;
+            const time = document.getElementById('taskTime').value;
+            const freq = document.getElementById('taskFreq').value;
+            const note = document.getElementById('taskNote').value.trim();
+
+            if (!title || !time) return;
+
+            if (id) {
+                // Edit existing
+                tasks = tasks.map(t => t.id === parseInt(id) ? { ...t, title, category, time, freq, note } : t);
+                showToast('แก้ไขข้อมูลเรียบร้อย');
+            } else {
+                // Create new
+                const newTask = {
+                    id: Date.now(),
+                    title,
+                    category,
+                    time,
+                    freq,
+                    note,
+                    completed: false
+                };
+                tasks.push(newTask);
+                showToast('เพิ่มรายการใหม่เรียบร้อย');
+            }
+
+            saveTasks();
+            renderTasks();
+            closeModal();
+        }
+
+        function editTask(id) {
+            openModal(id);
+        }
+
+        function deleteTask(id) {
+            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasks();
+                renderTasks();
+                showToast('ลบรายการเรียบร้อย');
+            }
+        }
+
+        // Toast Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Utility: Sanitize HTML strings
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
