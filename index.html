@@ -53,7 +53,7 @@
             </button>
         </div>
 
-        <!-- Main Schedule Table (ตามแบบรูปวาด 100%) -->
+        <!-- Main Schedule Table -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                 <h2 class="font-semibold text-slate-700 text-lg flex items-center gap-2">
@@ -114,91 +114,4 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">มอบหมายให้คู่</label>
-                        <select id="taskPair" required class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                            <!-- Dynamic options -->
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">หมายเหตุ</label>
-                    <input type="text" id="taskNote" placeholder="เช่น ซื้อน้ำยาเพิ่ม, ทำช่วงเย็น" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                </div>
-                <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                    <button type="button" onclick="closeModal('modalAddTask')" class="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm">ยกเลิก</button>
-                    <button type="submit" class="px-5 py-2 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 text-sm shadow">บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal: Settings for Pairs & Categories -->
-    <div id="modalCustomData" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
-            <div class="bg-slate-800 px-6 py-4 text-white flex justify-between items-center">
-                <h3 class="font-semibold text-lg">จัดการรายชื่อคู่ & หมวดหมู่</h3>
-                <button onclick="closeModal('modalCustomData')" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-                <!-- Manage Pairs -->
-                <div>
-                    <h4 class="font-medium text-slate-700 mb-2 border-b pb-1 flex items-center justify-between">
-                        <span><i class="fa-solid fa-user-group text-brand-500"></i> รายชื่อแต่ละคู่</span>
-                    </h4>
-                    <div class="flex gap-2 mb-3">
-                        <input type="text" id="newPairInput" placeholder="เพิ่มคู่ใหม่..." class="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                        <button onclick="addPair()" class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-brand-700">เพิ่ม</button>
-                    </div>
-                    <ul id="pairList" class="space-y-1.5 text-sm"></ul>
-                </div>
-                <!-- Manage Categories -->
-                <div>
-                    <h4 class="font-medium text-slate-700 mb-2 border-b pb-1 flex items-center justify-between">
-                        <span><i class="fa-solid fa-layer-group text-indigo-500"></i> หมวดหมู่กิจกรรม</span>
-                    </h4>
-                    <div class="flex gap-2 mb-3">
-                        <input type="text" id="newCatInput" placeholder="เพิ่มหมวดหมู่ใหม่..." class="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                        <button onclick="addCategory()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700">เพิ่ม</button>
-                    </div>
-                    <ul id="catList" class="space-y-1.5 text-sm"></ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Data Structures & LocalStorage Initializers
-        let pairs = JSON.parse(localStorage.getItem('routiny_pairs')) || ['คู่ที่ 1', 'คู่ที่ 2', 'คู่ที่ 3'];
-        let categories = JSON.parse(localStorage.getItem('routiny_categories')) || ['งานบ้านทั่วไป', 'เครื่องใช้ไฟฟ้า', 'ซื้อของเข้าบ้าน', 'ดูแลสัตว์เลี้ยง'];
-        let tasks = JSON.parse(localStorage.getItem('routiny_tasks')) || [];
-
-        // Set default month input to current YYYY-MM
-        const today = new Date();
-        const currentMonthStr = today.toISOString().slice(0, 7);
-        document.getElementById('filterMonth').value = currentMonthStr;
-
-        function saveToStorage() {
-            localStorage.setItem('routiny_pairs', JSON.stringify(pairs));
-            localStorage.setItem('routiny_categories', JSON.stringify(categories));
-            localStorage.setItem('routiny_tasks', JSON.stringify(tasks));
-        }
-
-        // Render Dropdown options & Customization Lists
-        function updateDropdowns() {
-            const pairSelect = document.getElementById('taskPair');
-            const catSelect = document.getElementById('taskCategory');
-            
-            pairSelect.innerHTML = pairs.map(p => `<option value="${p}">${p}</option>`).join('');
-            catSelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-
-            // Render Manage Pairs List
-            document.getElementById('pairList').innerHTML = pairs.map((p, index) => `
-                <li class="flex justify-between items-center bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
-                    <span>${p}</span>
-                    <button onclick="deletePair(${index})" class="text-red-500 hover:text-red-700"><i class="fa-regular fa-trash-can"></i></button>
-                </li>
-            `).join('');
-
-            // Render Manage Categories List
-            document.getElementById('catList').innerHTML = categories.map((c, index) => `
-                <li class="flex justify-between items-center bg-slate-50 px-3 py-1.
+                        <label class="block text-xs font-medium text-slate-600 mb-1">มอบหมายให้คู่
